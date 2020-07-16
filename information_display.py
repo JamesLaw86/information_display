@@ -3,7 +3,7 @@ from threading import Thread, Lock
 import copy
 import time
 
-from guizero import App, Picture, Text
+from guizero import App, Picture, Text, Box
 from enum import Enum
 
 class CurrentDisplay(Enum):
@@ -14,12 +14,17 @@ class DisplayApp(object):
     """
     Application to display rail times, weather, and whatever else
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         first start the thread to read data from the internet, then set up the
         user interface controls
         """
         self.current_rail_services = None
+        
+        if kwargs:
+            if 'rail' in kwargs:
+                self.current_rail_services = kwargs['rail']
+        
         self.mutex = Lock()
         self.stop_data_read = False
         self.data_read_thread = Thread(target = self.read_data_thread)
@@ -28,7 +33,6 @@ class DisplayApp(object):
 
         self.app = App()
         self.app.repeat(5000, self.update_display)
-        
         
         """Add the various controls / widgets"""
         self.controls_dic = {}
@@ -40,7 +44,7 @@ class DisplayApp(object):
         
         self.add_weather_controls()
 
-        self.app.bg = "white"
+        self.app.bg = (40, 40, 40)
         
         self.set_display()
         self.app.display()
@@ -55,7 +59,8 @@ class DisplayApp(object):
         self.rail_board = service_board.service_board(train_key)
         while not self.stop_data_read:
             try:
-                self.update_train_data()
+                pass
+                #self.update_train_data()
             except:
                 print('Exception occured int read_data_thread')
             time.sleep(10000)
@@ -69,7 +74,11 @@ class DisplayApp(object):
         
  
     def add_train_controls(self):
-        train_heading_text = Text(self.app, text = 'Horsham Trains')
+        self.train_txt_col = (255, 165, 0)
+        train_heading_text = Text(self.app, text = 'Horsham Trains', 
+                                  color = self.train_txt_col)
+        
+        
         self.horsham_pic = Picture(self.app, image='horsham_station.jpg')
         self.horsham_pic.height = int(self.horsham_pic.height /4)
         self.horsham_pic.width = int(self.horsham_pic.width /4)
@@ -93,7 +102,7 @@ class DisplayApp(object):
         """
         
         """
-        if self.current_display is CurrentDisplay.TRAINS:
+        if self.current_display is CurrentDisplay.TRAINS and False:
             self.current_display = CurrentDisplay.WEATHER
         elif self.current_display is CurrentDisplay.WEATHER:
             self.current_display = CurrentDisplay.TRAINS
@@ -123,33 +132,67 @@ class DisplayApp(object):
             self.set_weather_display()
     
     def set_train_display(self):
+        """
+        """
+        
         if not self.current_rail_services:
             return
         
-        temp_text = Text(self.app, text = 'Dept           Dest          Est          Platform')
-        self.temp_controls.append(temp_text)
-        self.mutex.acquire()
-
-        for service_num in self.current_rail_services:
-            service = self.current_rail_services[service_num]
-                    
-            st =  service.sch_dept + '  ' + service.destination + '  '\
-            + service.est_dept + '  ' + service.platform
-            
-            temp_text = Text(self.app, text = st)
+        text_color = (255,165,0)
+        box = Box(self.app, layout = 'grid')
+        self.temp_controls.append(box)
+        
+        temp_text = Text(box, text = '', size = 8, grid = [0, 0])   #some space
+        
+        headings = ['Dept', 'Dest', 'Est', 'Platform']
+        column = 0
+        for heading in headings:
+            temp_text = Text(box, text = heading, align = 'left', 
+                             grid = [column, 1], color = self.train_txt_col)
             self.temp_controls.append(temp_text)
+            column += 1
+        
+        temp_text = Text(box, text = '', size = 4, grid = [0, 2])    #some space
+        
+        self.mutex.acquire()
+        row = 3
+        for service_num in reversed(list(self.current_rail_services.keys())):
+            service = self.current_rail_services[service_num]
+            
+            train_info = [service.sch_dept,
+                          service.destination,
+                          service.est_dept,
+                          service.platform]
+            column = 0
+            for info in train_info:
+                temp_text = Text(box, text = info + '        ', align = 'left', 
+                                 grid = [column, row], size = 11, 
+                                 color = self.train_txt_col)
+                self.temp_controls.append(temp_text)
+                column += 1
+            row += 1
             
         self.mutex.release()
             
-            
-    
+        
     def set_weather_display(self):
         pass
         
-        
+def get_trains_for_test():
+    with open('rail_token.txt', 'r') as csv_file:
+        train_key = csv_file.read()
+        rail_board = service_board.service_board(train_key)
+        rail_services = rail_board.get_services('VIC', 8)
+    return rail_services
+    
 
+test = 0
+if test:
+    kwargs = {}
+    trains = get_trains_for_test()
+    kwargs['rail'] = trains
 
-app = DisplayApp()
+app = DisplayApp(**kwargs)
 
 
 

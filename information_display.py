@@ -59,15 +59,15 @@ class DisplayApp(object):
         self.rail_board = service_board.service_board(train_key)
         while not self.stop_data_read:
             try:
-                pass
-                #self.update_train_data()
+                #pass
+                self.update_train_data()
             except:
                 print('Exception occured int read_data_thread')
             time.sleep(10000)
         
     def update_train_data(self):
         """Call the server to update the current data"""
-        rail_services = self.rail_board.get_services('VIC', 8)
+        rail_services = self.rail_board.get_services('HRH', 8)
         self.mutex.acquire()
         self.current_rail_services = copy.deepcopy(rail_services)
         self.mutex.release()
@@ -182,15 +182,19 @@ def get_trains_for_test():
     with open('rail_token.txt', 'r') as csv_file:
         train_key = csv_file.read()
         rail_board = service_board.service_board(train_key)
-        rail_services = rail_board.get_services('VIC', 8)
+        rail_services = rail_board.get_services('HRH', 8)
     return rail_services
     
-
 test = 0
+get_data = 0
 if test:
+    if get_data:
+        test_data = {}
+        trains = get_trains_for_test()
+        test_data['rail'] = trains
+    kwargs = test_data
+else:
     kwargs = {}
-    trains = get_trains_for_test()
-    kwargs['rail'] = trains
 
 app = DisplayApp(**kwargs)
 

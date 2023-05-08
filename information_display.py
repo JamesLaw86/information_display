@@ -32,7 +32,7 @@ class DisplayApp(object):
         self.data_read_thread.start()
 
         self.app = App()
-        self.app.repeat(5000, self.update_display)
+        self.app.repeat(15000, self.update_display)
         
         """Add the various controls / widgets"""
         self.controls_dic = {}
@@ -63,11 +63,11 @@ class DisplayApp(object):
                 self.update_train_data()
             except:
                 print('Exception occured int read_data_thread')
-            time.sleep(10000)
+            time.sleep(120000)
         
     def update_train_data(self):
         """Call the server to update the current data"""
-        rail_services = self.rail_board.get_services('HRH', 8)
+        rail_services = self.rail_board.get_services('HRH', 10)
         self.mutex.acquire()
         self.current_rail_services = copy.deepcopy(rail_services)
         self.mutex.release()
@@ -75,28 +75,29 @@ class DisplayApp(object):
  
     def add_train_controls(self):
         self.train_txt_col = (255, 165, 0)
+        padding_text = Text(self.app, '')
         train_heading_text = Text(self.app, text = 'Horsham Trains', 
                                   color = self.train_txt_col)
         
         
-        self.horsham_pic = Picture(self.app, image='horsham_station.jpg')
-        self.horsham_pic.height = int(self.horsham_pic.height /4)
-        self.horsham_pic.width = int(self.horsham_pic.width /4)
+        #self.horsham_pic = Picture(self.app, image='horsham_station.jpg')
+        #self.horsham_pic.height = int(self.horsham_pic.height /4)
+        #self.horsham_pic.width = int(self.horsham_pic.width /4)
         
-        self.controls_dic[CurrentDisplay.TRAINS] = [train_heading_text, self.horsham_pic]
+        self.controls_dic[CurrentDisplay.TRAINS] = [train_heading_text, padding_text]#, self.horsham_pic]
         
 
 
     def add_weather_controls(self):
         weather_heading_text = Text(self.app, text = 'Horsham Weather')
         
-        self.weather_pic = Picture(self.app, image='horsham_weather.jpg')
-        self.weather_pic.height = int(self.horsham_pic.height )
-        self.weather_pic.width = int(self.horsham_pic.width)
+        #self.weather_pic = Picture(self.app, image='horsham_weather.jpg')
+        #self.weather_pic.height = int(self.horsham_pic.height )
+        #self.weather_pic.width = int(self.horsham_pic.width)
         
         weather_heading_text.hide()
-        self.weather_pic.hide()
-        self.controls_dic[CurrentDisplay.WEATHER] = [weather_heading_text, self.weather_pic]
+        #self.weather_pic.hide()
+        self.controls_dic[CurrentDisplay.WEATHER] = [weather_heading_text]#, self.weather_pic]
         
     def update_display(self):
         """
@@ -156,7 +157,7 @@ class DisplayApp(object):
         
         self.mutex.acquire()
         row = 3
-        for service_num in reversed(list(self.current_rail_services.keys())):
+        for service_num in list(self.current_rail_services.keys()):
             service = self.current_rail_services[service_num]
             
             train_info = [service.sch_dept,

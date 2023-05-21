@@ -5,11 +5,6 @@ import time
 import weather_receiver
 
 from guizero import App, Picture, Text, Box
-from enum import Enum
-
-class CurrentDisplay(Enum):
-    TRAINS = 1
-    WEATHER = 2
 
 class DisplayApp(object):
     """
@@ -40,10 +35,7 @@ class DisplayApp(object):
         self.current_controls = []   #currently active controls
         self.temp_controls = []    #stuff that changes, e.g. train times
         
-        self.add_controls()
-        self.current_display = CurrentDisplay.TRAINS
-        
-        self.add_weather_controls()
+        self.add_fixed_controls()
 
         self.app.bg = (40, 40, 40)
         
@@ -81,54 +73,19 @@ class DisplayApp(object):
         self.mutex.release()
         
  
-    def add_controls(self):
+    def add_fixed_controls(self):
         self.train_txt_col = (255, 165, 0)
         padding_text = Text(self.app, '')
         train_heading_text = Text(self.app, text = 'Horsham Trains and Weather', 
                                   color = self.train_txt_col)
         
-        
-        #self.horsham_pic = Picture(self.app, image='horsham_station.jpg')
-        #self.horsham_pic.height = int(self.horsham_pic.height /4)
-        #self.horsham_pic.width = int(self.horsham_pic.width /4)
-        
-        self.controls_dic[CurrentDisplay.TRAINS] = [train_heading_text, padding_text]#, self.horsham_pic]
-        
 
-
-    def add_weather_controls(self):
-        weather_heading_text = Text(self.app, text = 'Horsham Weather')
-        
-        #self.weather_pic = Picture(self.app, image='horsham_weather.jpg')
-        #self.weather_pic.height = int(self.horsham_pic.height )
-        #self.weather_pic.width = int(self.horsham_pic.width)
-        
-        weather_heading_text.hide()
-        #self.weather_pic.hide()
-        self.controls_dic[CurrentDisplay.WEATHER] = [weather_heading_text]#, self.weather_pic]
-        
     def update_display(self):
-        self.set_display()
-    
-    
-    def set_display(self):
-        """
-        Set the currently active display. Need to destroy temporary controls,
-        hide the previous current controls and show the new current controls
-        """
         for temp_control in self.temp_controls:
             temp_control.destroy()
         
-        self.temp_controls = []
-        
-        for control in self.current_controls: #hide the current set of controls
-            control.hide()
-            
-        self.current_controls = self.controls_dic[self.current_display]  #show the new set
-        for control in self.current_controls:
-            control.show()
-        
         self.update_information_display()
+    
     
     def update_information_display(self):
         """
@@ -170,6 +127,7 @@ class DisplayApp(object):
                 column += 1
             row += 1
         
+        #add the weather
         temp_text = Text(box, text = '', grid=[0, row], size = 11)
         column = 0
         if self.current_forecast:
@@ -188,9 +146,6 @@ class DisplayApp(object):
             
         self.mutex.release()
             
-        
-    def set_weather_display(self):
-        pass
     
     def update_weather_data(self):
         forecast = self.weather_reciever.forecast_byID(self.weatherID)

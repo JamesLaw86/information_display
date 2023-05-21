@@ -2,6 +2,7 @@ import service_board
 from threading import Thread, Lock
 import copy
 import time
+import weather_receiver
 
 from guizero import App, Picture, Text, Box
 from enum import Enum
@@ -39,7 +40,7 @@ class DisplayApp(object):
         self.current_controls = []   #currently active controls
         self.temp_controls = []    #stuff that changes, e.g. train times
         
-        self.add_train_controls()
+        self.add_controls()
         self.current_display = CurrentDisplay.TRAINS
         
         self.add_weather_controls()
@@ -57,9 +58,16 @@ class DisplayApp(object):
         with open('rail_token.txt', 'r') as csv_file:
             train_key = csv_file.read()
         self.rail_board = service_board.service_board(train_key)
+        
+        with open('weather_key.txt') as txt_file:
+            lines = txt_file.readlines()
+            key = lines[0]
+            self.weatherID = '7290651'
+            self.weather_reciever = weather_receiver.cweather_receiver(key)
+        
         while not self.stop_data_read:
             try:
-                #pass
+                self.update_weather_data()
                 self.update_train_data()
             except:
                 print('Exception occured int read_data_thread')
@@ -73,10 +81,10 @@ class DisplayApp(object):
         self.mutex.release()
         
  
-    def add_train_controls(self):
+    def add_controls(self):
         self.train_txt_col = (255, 165, 0)
         padding_text = Text(self.app, '')
-        train_heading_text = Text(self.app, text = 'Horsham Trains', 
+        train_heading_text = Text(self.app, text = 'Horsham Trains and Weather', 
                                   color = self.train_txt_col)
         
         
@@ -100,13 +108,6 @@ class DisplayApp(object):
         self.controls_dic[CurrentDisplay.WEATHER] = [weather_heading_text]#, self.weather_pic]
         
     def update_display(self):
-        """
-        
-        """
-        if self.current_display is CurrentDisplay.TRAINS and False:
-            self.current_display = CurrentDisplay.WEATHER
-        elif self.current_display is CurrentDisplay.WEATHER:
-            self.current_display = CurrentDisplay.TRAINS
         self.set_display()
     
     
@@ -127,19 +128,15 @@ class DisplayApp(object):
         for control in self.current_controls:
             control.show()
         
-        if self.current_display is CurrentDisplay.TRAINS:
-            self.set_train_display()
-        else:
-            self.set_weather_display()
+        self.update_information_display()
     
-    def set_train_display(self):
+    def update_information_display(self):
         """
         """
         
         if not self.current_rail_services:
             return
         
-        text_color = (255,165,0)
         box = Box(self.app, layout = 'grid')
         self.temp_controls.append(box)
         
@@ -172,12 +169,37 @@ class DisplayApp(object):
                 self.temp_controls.append(temp_text)
                 column += 1
             row += 1
+        
+        temp_text = Text(box, text = '', grid=[0, row], size = 11)
+        column = 0
+        if self.current_forecast:
+            row += 1
+            for weather_point in self.current_forecast:
+                weather_text = weather_point.date_time.strftime("%H:%M")
+                weather_text += '\n' + weather_point.main_weather
+                degree_symbol = '\u00B0'
+                temperature = round(float(weather_point.mainT))
+                weather_text += '\n' + str(temperature) + degree_symbol
+                temp_text = Text(box, text = weather_text, grid=[column, row],
+                                 size = 11, 
+                                 color = self.train_txt_col)
+                column+=1
+                self.temp_controls.append(temp_text)
             
         self.mutex.release()
             
         
     def set_weather_display(self):
         pass
+    
+    def update_weather_data(self):
+        forecast = self.weather_reciever.forecast_byID(self.weatherID)
+        if len(forecast) < 3:
+            return
+        self.mutex.acquire()
+        self.current_forecast = copy.deepcopy(forecast[0:3])
+        self.mutex.release()
+        
         
 def get_trains_for_test():
     with open('rail_token.txt', 'r') as csv_file:

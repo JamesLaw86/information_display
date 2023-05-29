@@ -3,6 +3,7 @@ from threading import Thread, Lock
 import copy
 import time
 import weather_receiver
+from datetime import datetime
 
 from guizero import App, Picture, Text, Box
 
@@ -39,7 +40,6 @@ class DisplayApp(object):
 
         self.app.bg = (40, 40, 40)
         
-        self.set_display()
         self.app.display()
         
 
@@ -61,8 +61,8 @@ class DisplayApp(object):
             try:
                 self.update_weather_data()
                 self.update_train_data()
-            except:
-                print('Exception occured int read_data_thread')
+            except Exception as e:
+                print('Exception occured int read_data_thread\n', e)
             time.sleep(120000)
         
     def update_train_data(self):
@@ -70,14 +70,17 @@ class DisplayApp(object):
         rail_services = self.rail_board.get_services('HRH', 10)
         self.mutex.acquire()
         self.current_rail_services = copy.deepcopy(rail_services)
+        now = datetime.now()
+        self.update_time = now.strftime("%d, %m, %Y, %H:%M")
         self.mutex.release()
         
  
     def add_fixed_controls(self):
         self.train_txt_col = (255, 165, 0)
         padding_text = Text(self.app, '')
-        train_heading_text = Text(self.app, text = 'Horsham Trains and Weather', 
+        self.train_heading_text = Text(self.app, text = 'Horsham Trains and Weather', 
                                   color = self.train_txt_col)
+        
         
 
     def update_display(self):
@@ -97,7 +100,10 @@ class DisplayApp(object):
         box = Box(self.app, layout = 'grid')
         self.temp_controls.append(box)
         
-        temp_text = Text(box, text = '', size = 8, grid = [0, 0])   #some space
+        update_time_text = f"Updated: {self.update_time}"
+        temp_text = Text(box, text = update_time_text, size = 8, grid = [0, 0, 2, 1],
+        color = self.train_txt_col)   #some space
+        self.temp_controls.append(temp_text)
         
         headings = ['Dept', 'Dest', 'Est', 'Platform']
         column = 0
@@ -111,6 +117,8 @@ class DisplayApp(object):
         
         self.mutex.acquire()
         row = 3
+        
+
         for service_num in list(self.current_rail_services.keys()):
             service = self.current_rail_services[service_num]
             
@@ -149,10 +157,10 @@ class DisplayApp(object):
     
     def update_weather_data(self):
         forecast = self.weather_reciever.forecast_byID(self.weatherID)
-        if len(forecast) < 3:
+        if not forecast or len(forecast) < 3:
             return
         self.mutex.acquire()
-        self.current_forecast = copy.deepcopy(forecast[0:3])
+        self.current_forecast = copy.deepcopy(forecast[0:4])
         self.mutex.release()
         
         
